@@ -1,4 +1,5 @@
 //button-darkMood
+var currentThemeColor = "";
 var themeToggleBtn = document.getElementById("theme-toggle-button");
 var html = document.documentElement;
 
@@ -41,19 +42,39 @@ var portfolioItems = document.querySelectorAll(".portfolio-item");
 
 filterButtons.forEach(button => {
   button.addEventListener("click", () => {
-    filterButtons.forEach(btn => btn.classList.remove("active"));
+    filterButtons.forEach(btn => {
+      btn.classList.remove("active");
+      // Remove active classes
+      btn.classList.remove("bg-linear-to-r", "from-primary", "to-secondary", "text-white", "hover:shadow-lg", "hover:shadow-primary/50");
+      // Add inactive classes
+      btn.classList.add("bg-white", "dark:bg-slate-800", "text-slate-600", "dark:text-slate-300", "border", "border-slate-300", "dark:border-slate-700", "hover:bg-slate-100", "dark:hover:bg-slate-700");
+      // Reset background style in case a custom theme color was active
+      btn.style.background = "";
+      btn.setAttribute("aria-pressed", "false");
+    });
+
     button.classList.add("active");
+    // Remove inactive classes
+    button.classList.remove("bg-white", "dark:bg-slate-800", "text-slate-600", "dark:text-slate-300", "border", "border-slate-300", "dark:border-slate-700", "hover:bg-slate-100", "dark:hover:bg-slate-700");
+    // Add active classes
+    button.classList.add("bg-linear-to-r", "from-primary", "to-secondary", "text-white", "hover:shadow-lg", "hover:shadow-primary/50");
+    button.setAttribute("aria-pressed", "true");
+
+    // If a custom theme color is active, apply it to the newly active button
+    if (currentThemeColor) {
+      button.style.background = currentThemeColor;
+    }
 
     var filter = button.getAttribute("data-filter");
 
     portfolioItems.forEach(item => {
-      if(filter === "all") {
+      if (filter === "all") {
         item.style.display = "block";
       } else {
-        if(item.getAttribute("data-category") === filter) {
+        if (item.getAttribute("data-category") === filter) {
           item.style.display = "block";
         } else {
-          item.style.display = item.getAttribute("data-category") === filter ? "block" : "none";
+          item.style.display = "none";
         }
       }
     });
@@ -125,16 +146,17 @@ var defaultFont = "tajawal";
 var defaultColor = "";
 
 resetButton.addEventListener("click", () => {
+  currentThemeColor = "";
   document.body.style.fontFamily = defaultFont;
   document.body.style.color = defaultColor;
 
   document.querySelectorAll("span,button, [data-icon=code]").forEach(el => {
     el.style.color = defaultColor;
   });
- document.querySelectorAll(".one,.two").forEach(el => {
+  document.querySelectorAll(".one,.two").forEach(el => {
     el.style.background = defaultColor;
   });
-scrollToTopBtn.style.background = defaultColor;
+  scrollToTopBtn.style.background = defaultColor;
   document.querySelectorAll(".font-option").forEach(btn => {
     if (btn.dataset.font === defaultFont) {
       btn.classList.add("active");
@@ -166,14 +188,26 @@ themeColors.forEach(color => {
   btn.title = color.name;
 
   btn.addEventListener("click", () => {
+    currentThemeColor = color.value;
     document.querySelectorAll(" span,[data-icon=code]").forEach(el => {
       el.style.color = color.value;
     });
     scrollToTopBtn.style.background = color.value;
-  document.querySelector(".one,button").style.background = color.value;
-  document.querySelectorAll(".two").forEach(el => {
-  el.style.background = color.value;
-});
+    document.querySelectorAll(".one").forEach(el => {
+      el.style.background = color.value;
+    });
+    document.querySelectorAll(".two").forEach(el => {
+      // Only apply custom background color to the active portfolio filter button, not the inactive ones
+      if (el.classList.contains("portfolio-filter")) {
+        if (el.classList.contains("active")) {
+          el.style.background = color.value;
+        } else {
+          el.style.background = "";
+        }
+      } else {
+        el.style.background = color.value;
+      }
+    });
     colorsGrid.querySelectorAll("button").forEach(b => b.classList.remove("border-primary"));
     btn.classList.add("border-primary");
   });
@@ -190,18 +224,42 @@ var cards = document.querySelectorAll(".testimonial-card");
 var indicators = document.querySelectorAll(".carousel-indicator");
 
 var totalCards = cards.length;
-var visibleCards = 3;
 let currentIndex = 0;
 
+function getVisibleCardsCount() {
+  if (window.innerWidth >= 1024) {
+    return 3;
+  } else if (window.innerWidth >= 640) {
+    return 2;
+  } else {
+    return 1;
+  }
+}
+
 function updateCarousel() {
+  var visibleCards = getVisibleCardsCount();
+  var maxIndex = totalCards - visibleCards;
+  if (currentIndex > maxIndex) {
+    currentIndex = maxIndex;
+  }
+  if (currentIndex < 0) {
+    currentIndex = 0;
+  }
+
   var cardWidth = cards[0].getBoundingClientRect().width;
-  carousel.style.transform = `translateX(-${currentIndex * cardWidth}px)`;
+  // In RTL layouts, translating by positive (currentIndex * cardWidth) slides the carousel correctly.
+  carousel.style.transform = `translateX(${currentIndex * cardWidth}px)`;
   updateIndicators();
 }
 
 function updateIndicators() {
+  var activeIndicatorIndex = currentIndex;
+  if (activeIndicatorIndex >= indicators.length) {
+    activeIndicatorIndex = indicators.length - 1;
+  }
+
   indicators.forEach((btn, i) => {
-    if (i === currentIndex) {
+    if (i === activeIndicatorIndex) {
       btn.classList.add("bg-accent");
       btn.setAttribute("aria-selected", "true");
     } else {
@@ -212,6 +270,7 @@ function updateIndicators() {
 }
 
 nextBtn.addEventListener("click", () => {
+  var visibleCards = getVisibleCardsCount();
   if (currentIndex < totalCards - visibleCards) {
     currentIndex++;
     updateCarousel();
@@ -231,6 +290,10 @@ indicators.forEach((btn) => {
     currentIndex = index;
     updateCarousel();
   });
+});
+
+window.addEventListener("resize", () => {
+  updateCarousel();
 });
 
 updateCarousel();
